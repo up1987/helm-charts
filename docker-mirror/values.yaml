@@ -1,0 +1,79 @@
+
+replicaCount: 1
+
+nginx:
+  image:
+    repository: openresty/openresty
+    tag: 1.15.8.2-bionic
+    pullPolicy: IfNotPresent
+  resources: {}
+  max_cache_size: 200g
+  cache_inactive: 60d
+  cache_time: 1h
+  custom_config: |
+    server_tokens off;
+  securityContext:
+    capabilities:
+      add:
+      - NET_BIND_SERVICE
+      drop:
+      - ALL
+    runAsUser: 33
+
+registry:
+  image:
+    repository: registry
+    tag: 2
+    pullPolicy: IfNotPresent
+  resources: {}
+  securityContext:
+    runAsUser: 1000
+
+repo:
+  - name: quay.io
+    paths:
+      - coreos
+      - external_storage
+      - kubernetes-ingress-controller
+  - name: registry-1.docker.io
+    paths:
+      - library
+      - "[0-9a-z]+"
+  - name: gcr.io
+    paths:
+      - google-containers
+      - google_containers
+      - kubernetes-helm
+      - k8s-minikube
+
+service:
+  type: ClusterIP
+  port: 5000
+
+ingress:
+  enabled: false
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: example.local
+      paths:
+      - /
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - example.local
+
+persistence:
+  enabled: true
+  storageClass:
+  accessMode: ReadWriteOnce
+  size: 200Gi
+  existingClaim: ""
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
