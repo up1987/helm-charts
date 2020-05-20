@@ -46,40 +46,41 @@ data:
       gzip on;
       {{- .Values.nginx.custom_config | nindent 6 }}
 
+      upstream backend {
+          server unix:/tmp/nginx.sock;
+      }
+
       server {
-        server_name _;
         listen 8080;
-
-        location / {
-          #rewrite ^/ansible/ansible-2.7/(.*) {{ .Values.nginx.worldRoot }}/http/ppa.launchpad.net/ansible/ansible-2.7/$1 last;
-          #rewrite ^/github/(.*) {{ .Values.nginx.worldRoot }}/https/github.com/$1 last;
-          #rewrite ^/pypi/(.*) {{ .Values.nginx.worldRoot }}/https/pypi.org/$1 last;
-          #rewrite ^/npm/(.*) {{ .Values.nginx.worldRoot }}/https/registry.npmjs.org/$1 last;
-          return 404;
-        }
-
+        location / { return 404; }
         location /healthz { return 200; access_log off; }
+        location ~ {{ .Values.nginx.worldRoot }}/(http|https)/([-a-z0-9\.]+)/(.*) {
+          sub_filter $target $scheme://$http_host{{ .Values.nginx.worldRoot }}/$1/$2;
+          sub_filter https://files.pythonhosted.org/packages $scheme://$http_host{{ .Values.nginx.worldRoot }}/https/files.pythonhosted.org/packages;
+          sub_filter_once off;
+          sub_filter_types *;
+          proxy_set_header Accept-Encoding "";
+          proxy_pass http://backend;
+        }
+      }
 
+      server {
+        listen unix:/tmp/nginx.sock;
+        access_log off;
         location @handle_redirects {
           set $saved_redirect_location '$upstream_http_location';
           proxy_intercept_errors on;
           error_page 301 302 307 = @handle_redirects;
           proxy_pass $saved_redirect_location;
         }
-
         location ~ {{ .Values.nginx.worldRoot }}/(http|https)/([-a-z0-9\.]+)/(.*) {
           set $target "$1://$2";
-          sub_filter $target $scheme://$http_host{{ .Values.nginx.worldRoot }}/$1/$2;
-          sub_filter https://files.pythonhosted.org/packages $scheme://$http_host{{ .Values.nginx.worldRoot }}/https/files.pythonhosted.org/packages;
-          sub_filter_once off;
-          sub_filter_types *;
           proxy_set_header Host $2;
-          proxy_set_header Accept-Encoding "";
+          proxy_set_header Accept-Encoding "gzip";
           rewrite {{ .Values.nginx.worldRoot }}/(http|https)/([-a-z0-9\.]+)/(.*) /$3 break;
           error_page 301 302 307 = @handle_redirects;
           proxy_pass $target;
           proxy_redirect ~$target /{{ .Values.nginx.worldRoot }}/$1/$2/;
         }
-
       }
     }
