@@ -42,6 +42,11 @@ data:
       proxy_intercept_errors on;
       recursive_error_pages on;
       resolver local=on ipv6=off;
+      aio threads;
+      aio_write on;
+      sendfile on;
+      tcp_nopush on;
+      tcp_nodelay on;
       gunzip on;
       gzip on;
       {{- .Values.nginx.custom_config | nindent 6 }}
