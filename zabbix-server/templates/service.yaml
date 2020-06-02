@@ -1,0 +1,58 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "zabbix-server.fullname" . }}-core
+  labels:
+    {{- include "zabbix-server.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  {{- if and (eq .Values.service.type "ClusterIP") .Values.service.clusterIP }}
+  clusterIP: {{ .Values.service.clusterIP }}
+  {{- end }}
+  ports:
+    - port: 10051
+      targetPort: zabbix-trapper
+      protocol: TCP
+      name: zabbix-trapper
+    - port: 10052
+      targetPort: java-gateway
+      protocol: TCP
+      name: java-gateway
+    - port: 162
+      targetPort: snmp-trap
+      protocol: UDP
+      name: snmp-trap
+  selector:
+    {{- include "zabbix-server.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: zabbix-server
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "zabbix-server.fullname" . }}-core-headless
+  labels:
+    {{- include "zabbix-server.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    {{- include "zabbix-server.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: zabbix-server
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "zabbix-server.fullname" . }}-web
+  labels:
+    {{- include "zabbix-server.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: 8080
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "zabbix-server.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: zabbix-web

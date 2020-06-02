@@ -1,0 +1,90 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "zabbix-server.fullname" . }}-agent
+  labels:
+    {{- include "zabbix-server.labels" . | nindent 4 }}
+    app.kubernetes.io/component: zabbix-agent
+spec:
+  selector:
+    matchLabels:
+      {{- include "zabbix-server.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: zabbix-agent
+  template:
+    metadata:
+      labels:
+        {{- include "zabbix-server.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: zabbix-agent
+    spec:
+      automountServiceAccountToken: false
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - name: zabbix-agent
+          securityContext:
+            {{- toYaml .Values.agent.securityContext | nindent 12 }}
+          image: "{{ .Values.agent.image.repository }}:{{ .Values.agent.image.tag }}"
+          imagePullPolicy: {{ .Values.agent.image.pullPolicy }}
+          env:
+            - name: ZBX_SERVER_HOST
+              value: {{ include "zabbix-server.fullname" . }}-core-headless
+            - name: ZBX_HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: ZBX_LISTENIP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: ZBX_LISTENPORT
+              value: "10050"
+            - name: ZBX_METADATAITEM
+              value: "system.uname"
+            - name: ZBX_PASSIVESERVERS
+              value: {{ include "zabbix-server.fullname" . }}-core-headless
+            - name: ZBX_TLSPSKFILE
+              value: "psk.key"
+            - name: ZBX_TLSPSKIDENTITY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "zabbix-server.fullname" . }}-psk
+                  key: psk.identity
+            - name: ZBX_TLSCONNECT
+              value: "psk"
+            - name: ZBX_TLSACCEPT
+              value: "psk"
+          volumeMounts:
+            - name: psk
+              mountPath: /var/lib/zabbix/enc/psk.key
+              subPath: psk.key
+          ports:
+            - containerPort: 10050
+              protocol: TCP
+              name: zabbix-zgent
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      volumes:
+        - secret:
+            defaultMode: 0644
+            secretName: {{ include "zabbix-server.fullname" . }}-psk
+            optional: false
+          name: psk
