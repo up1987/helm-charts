@@ -33,6 +33,8 @@ data:
       proxy_cache_lock_timeout 0s;
       proxy_cache_lock_age 2m;
       proxy_cache_use_stale error timeout;
+      proxy_cache_bypass $http_pragma;
+      proxy_no_cache $http_authorization;
       proxy_ignore_headers Set-Cookie;
       proxy_pass_header Server;
       proxy_send_timeout 30m;
