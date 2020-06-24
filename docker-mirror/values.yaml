@@ -30,21 +30,21 @@ registry:
     runAsUser: 1000
 
 repo:
+  - name: registry-1.docker.io
+    paths:
+      - library
+      - "[a-z0-9_-]+"
   - name: quay.io
     paths:
       - coreos
       - external_storage
       - kubernetes-ingress-controller
-  - name: registry-1.docker.io
-    paths:
-      - library
-      - "[0-9a-z]+"
-  - name: gcr.io
-    paths:
-      - google-containers
-      - google_containers
-      - kubernetes-helm
-      - k8s-minikube
+  # - name: gcr.io
+  #   paths:
+  #     - google-containers
+  #     - google_containers
+  #     - kubernetes-helm
+  #     - k8s-minikube
 
 service:
   type: ClusterIP

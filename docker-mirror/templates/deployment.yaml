@@ -25,6 +25,20 @@ spec:
     {{- end }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: setup-pv
+          image:  "{{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag }}"
+          imagePullPolicy: {{ .Values.nginx.image.pullPolicy }}
+          volumeMounts:
+            - name: cache
+              mountPath: /var/cache/nginx
+          securityContext:
+            runAsUser: 0
+          command:
+            - bash
+            - -c
+            - |
+               chown www-data:www-data /var/cache/nginx
       containers:
         - name: nginx
           securityContext:
@@ -46,11 +60,11 @@ spec:
           resources:
             {{- toYaml .Values.nginx.resources | nindent 12 }}
           volumeMounts:
-          - name: cache
-            mountPath: /var/cache/nginx
-          - name: config
-            mountPath: /usr/local/openresty/nginx/conf/nginx.conf
-            subPath: nginx.conf
+            - name: cache
+              mountPath: /var/cache/nginx
+            - name: config
+              mountPath: /usr/local/openresty/nginx/conf/nginx.conf
+              subPath: nginx.conf
       {{- range $index, $value := .Values.repo }}
         - name: {{ $value.name | replace "." "-" }}
           securityContext:
@@ -58,17 +72,17 @@ spec:
           image: "{{ $.Values.registry.image.repository }}:{{ $.Values.registry.image.tag }}"
           imagePullPolicy: {{ $.Values.registry.image.pullPolicy }}
           ports:
-            - name: registry
+            - name: registry-{{ $index }}
               containerPort: {{ add $index 5001 }}
               protocol: TCP
           livenessProbe:
             httpGet:
               path: /v2/
-              port: registry
+              port: registry-{{ $index }}
           readinessProbe:
             httpGet:
               path: /v2/
-              port: registry
+              port: registry-{{ $index }}
           env:
             - name: REGISTRY_PROXY_REMOTEURL
               value: 'https://{{ $value.name }}'
