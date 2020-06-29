@@ -23,6 +23,10 @@ data:
       scgi_temp_path        /tmp/nginx-scgi;
       keepalive_timeout  75s;
       keepalive_requests 100;
+      log_format main '$remote_addr - $upstream_cache_status [$time_local] '
+                    '"$request" $status $body_bytes_sent '
+                    '"$http_referer" "$http_user_agent"';
+      access_log logs/access.log main;
       proxy_cache_background_update on;
       proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=cache:500m inactive={{ .Values.nginx.cache_inactive }} max_size={{ .Values.nginx.max_cache_size }};
       proxy_cache_key $request_uri;
@@ -52,11 +56,9 @@ data:
       gunzip on;
       gzip on;
       {{- .Values.nginx.custom_config | nindent 6 }}
-
       upstream backend {
           server unix:/tmp/nginx.sock;
       }
-
       server {
         listen 8080;
         location / { return 404; }
@@ -71,7 +73,6 @@ data:
           proxy_pass http://backend;
         }
       }
-
       server {
         listen unix:/tmp/nginx.sock;
         access_log off;
@@ -84,11 +85,10 @@ data:
         location ~ {{ .Values.nginx.worldRoot }}/(http|https)/([-a-z0-9\.]+)/(.*) {
           set $target "$1://$2";
           proxy_set_header Host $2;
-          proxy_set_header Accept-Encoding "gzip";
           rewrite {{ .Values.nginx.worldRoot }}/(http|https)/([-a-z0-9\.]+)/(.*) /$3 break;
+          proxy_redirect ~$target /{{ .Values.nginx.worldRoot }}/$1/$2/;
           error_page 301 302 307 = @handle_redirects;
           proxy_pass $target;
-          proxy_redirect ~$target /{{ .Values.nginx.worldRoot }}/$1/$2/;
         }
       }
     }
