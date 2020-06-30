@@ -48,7 +48,7 @@ spec:
             - name: ZBX_METADATAITEM
               value: "system.uname"
             - name: ZBX_PASSIVESERVERS
-              value: {{ include "zabbix-server.fullname" . }}-core-headless
+              value: "0.0.0.0/0"
             - name: ZBX_TLSPSKFILE
               value: "psk.key"
             - name: ZBX_TLSPSKIDENTITY
