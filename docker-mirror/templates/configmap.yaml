@@ -41,7 +41,7 @@ data:
       proxy_cache_key $request_uri;
       proxy_cache cache;
       proxy_cache_revalidate on;
-      proxy_cache_valid 200 {{ .Values.nginx.cache_time }};
+      proxy_cache_valid {{ join " " .Values.nginx.cache_response }} {{ .Values.nginx.cache_time }};
       proxy_cache_use_stale error timeout;
       proxy_cache_lock on;
       proxy_cache_lock_timeout 0s;
