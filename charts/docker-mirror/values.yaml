@@ -44,6 +44,15 @@ repo:
       - google_containers
       - kubernetes-helm
       - k8s-minikube
+  - name: k8s.gcr.io
+    paths:
+      - kube-apiserver
+      - kube-controller-manager
+      - kube-scheduler
+      - kube-proxy
+      - pause
+      - etcd
+      - coredns
   - name: registry-1.docker.io
     paths:
       - library
