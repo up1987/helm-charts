@@ -38,7 +38,7 @@ spec:
             - bash
             - -c
             - |
-               chown www-data:www-data /var/cache/nginx
+               chown nginx:nginx /var/cache/nginx
       containers:
         - name: nginx
           securityContext:
@@ -63,7 +63,7 @@ spec:
             - name: cache
               mountPath: /var/cache/nginx
             - name: config
-              mountPath: /usr/local/openresty/nginx/conf/nginx.conf
+              mountPath: /etc/nginx/nginx.conf
               subPath: nginx.conf
       {{- range $index, $value := .Values.repo }}
         - name: {{ $value.name | replace "." "-" }}
