@@ -2,6 +2,15 @@ apiVersion: v1
 entries:
   docker-mirror:
   - apiVersion: v1
+    appVersion: 1.0.1
+    created: "2021-04-14T09:18:17.296038714Z"
+    description: Mirroring service for public docker registry
+    digest: 831e0b4abb08dc45320c5705f2acb139eaecfc03132fb0e3b8321209531e1555
+    name: docker-mirror
+    urls:
+    - https://github.com/up1987/helm-charts/releases/download/docker-mirror-1.0.1/docker-mirror-1.0.1.tgz
+    version: 1.0.1
+  - apiVersion: v1
     appVersion: 1.0.0
     created: "2021-01-21T04:34:54.565899447Z"
     description: Mirroring service for public docker registry
