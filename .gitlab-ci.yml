@@ -1,6 +1,6 @@
 lint Helm Charts:
   image:
-    name: linkyard/docker-helm
+    name: alpine/helm:3.7.2
     entrypoint: ["/bin/sh", "-c"]
   stage: test
   script:
@@ -8,7 +8,7 @@ lint Helm Charts:
 
 pages:
   image:
-    name: linkyard/docker-helm
+    name: alpine/helm:3.7.2
     entrypoint: ["/bin/sh", "-c"]
   stage: deploy
   script:
