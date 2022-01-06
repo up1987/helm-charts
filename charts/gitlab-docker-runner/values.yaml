@@ -6,10 +6,12 @@ replicaCount: 1
 
 image:
   repository: docker.io/gitlab/gitlab-runner
+  tag: v14.6.0
   pullPolicy: IfNotPresent
 
 docker:
-  repository: docker.io/library/docker:20-dind
+  repository: docker.io/library/docker
+  tag: 20-dind
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []

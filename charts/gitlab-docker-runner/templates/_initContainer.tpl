@@ -1,8 +1,8 @@
 {{- define "gitlab-docker-runner.initContainers" -}}
 - name: configure
   command: ['bash', '/configmaps/configure']
-  image: {{ .Values.image.repository }}
-  imagePullPolicy: {{ default "" .Values.image.imagePullPolicy | quote }}
+  image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+  imagePullPolicy: {{ default "" .Values.image.pullPolicy | quote }}
   securityContext: {{- toYaml .Values.securityContext | nindent 4 }}
   env: {{- include "gitlab-docker-runner.runner-env-vars" . | nindent 4 }}
   volumeMounts:

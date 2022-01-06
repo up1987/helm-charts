@@ -1,7 +1,7 @@
 {{- define "gitlab-docker-runner.containers" -}}
 - name: {{ .Chart.Name }}
-  image: {{ .Values.image.repository }}
-  imagePullPolicy: {{ default "" .Values.image.imagePullPolicy | quote }}
+  image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+  imagePullPolicy: {{ default "" .Values.image.pullPolicy | quote }}
   securityContext: {{- toYaml .Values.securityContext | nindent 4 }}
   command: ["/usr/bin/dumb-init", "--", "/bin/bash", "/configmaps/entrypoint"]
   env: {{- include "gitlab-docker-runner.runner-env-vars" . | nindent 4 }}
@@ -47,8 +47,8 @@
   resources:
     {{- toYaml .Values.resources | nindent 4 }}
 - name: docker
-  image: {{ .Values.docker.repository }}
-  imagePullPolicy: {{ default "" .Values.docker.imagePullPolicy | quote }}
+  image: "{{ .Values.docker.repository }}:{{ .Values.docker.tag }}"
+  imagePullPolicy: {{ default "" .Values.docker.pullPolicy | quote }}
   securityContext:
     privileged: true
   env: {{- include "gitlab-docker-runner.runner-env-vars" . | nindent 4 }}

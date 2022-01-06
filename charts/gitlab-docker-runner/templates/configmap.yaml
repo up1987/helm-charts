@@ -38,8 +38,8 @@ data:
   configure: |
     set -e
     
-    if [[ ! -f /home/gitlab-runner/.gitlab-runner/config.toml ]]; then
-      cp /configmaps/config.toml /home/gitlab-runner/.gitlab-runner/
+    if ! grep -q token /home/gitlab-runner/.gitlab-runner/config.toml 2>/dev/null ; then
+      cp -f /configmaps/config.toml /home/gitlab-runner/.gitlab-runner/
       if [[ -f /init-secrets/runner-registration-token ]]; then
         export REGISTRATION_TOKEN=$(cat /init-secrets/runner-registration-token)
       fi
