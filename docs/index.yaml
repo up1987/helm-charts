@@ -1,0 +1,58 @@
+apiVersion: v1
+entries:
+  docker-mirror:
+  - apiVersion: v1
+    appVersion: 1.0.1
+    created: "2021-04-14T09:18:17.296038714Z"
+    description: Mirroring service for public docker registry
+    digest: 831e0b4abb08dc45320c5705f2acb139eaecfc03132fb0e3b8321209531e1555
+    name: docker-mirror
+    urls:
+    - https://github.com/up1987/helm-charts/releases/download/docker-mirror-1.0.1/docker-mirror-1.0.1.tgz
+    version: 1.0.1
+  - apiVersion: v1
+    appVersion: 1.0.0
+    created: "2021-01-21T04:34:54.565899447Z"
+    description: Mirroring service for public docker registry
+    digest: aa76b28298cad19e2e583637e7f67d0b9dcbf845a0831b89188463d32a5c986f
+    name: docker-mirror
+    urls:
+    - https://github.com/up1987/helm-charts/releases/download/docker-mirror-1.0.0/docker-mirror-1.0.0.tgz
+    version: 1.0.0
+  gitlab-docker-runner:
+  - apiVersion: v2
+    appVersion: 14.6.0
+    created: "2022-01-04T09:27:58.549857287Z"
+    description: GitLab Runner with Docker excutor
+    digest: 863337718a7a32030d33fefaadbff65b8e8c9daf5bc7e525091336bd79f0a152
+    name: gitlab-docker-runner
+    urls:
+    - https://github.com/up1987/helm-charts/releases/download/gitlab-docker-runner-0.1.0/gitlab-docker-runner-0.1.0.tgz
+    version: 0.1.0
+  world-proxy:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2021-01-21T04:34:54.733634774Z"
+    description: A Helm chart for Kubernetes
+    digest: 95a8f25bbe80fef26cfcfdc3467d60998b7f4a7289e85344014e731839595e05
+    name: world-proxy
+    type: application
+    urls:
+    - https://github.com/up1987/helm-charts/releases/download/world-proxy-0.1.1/world-proxy-0.1.1.tgz
+    version: 0.1.1
+  zabbix-server:
+  - apiVersion: v2
+    appVersion: "5.0"
+    created: "2021-01-21T04:34:54.900209689Z"
+    dependencies:
+    - name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      version: 8.10.0
+    description: A Helm chart for Kubernetes
+    digest: def2ce153c43b6b13ebe925a91d9dfb800d5904221b9244d9f590a2b0f243853
+    name: zabbix-server
+    type: application
+    urls:
+    - https://github.com/up1987/helm-charts/releases/download/zabbix-server-0.1.0/zabbix-server-0.1.0.tgz
+    version: 0.1.0
+generated: "2021-01-21T04:34:54.361773546Z"

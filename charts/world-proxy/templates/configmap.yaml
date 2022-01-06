@@ -1,0 +1,94 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "world-proxy.fullname" . }}
+  labels:
+    {{- include "world-proxy.labels" . | nindent 4 }}
+data:
+  nginx.conf: |
+    worker_processes  2;
+    pid /tmp/nginx.pid;
+    events {
+      multi_accept        on;
+      worker_connections  16384;
+      use                 epoll;
+    }
+    http {
+      include       mime.types;
+      default_type  application/octet-stream;
+      client_body_temp_path /tmp/nginx-client-body;
+      proxy_temp_path       /tmp/nginx-proxy;
+      fastcgi_temp_path     /tmp/nginx-fastcgi;
+      uwsgi_temp_path       /tmp/nginx-uwsgi;
+      scgi_temp_path        /tmp/nginx-scgi;
+      keepalive_timeout  75s;
+      keepalive_requests 100;
+      log_format main '$remote_addr - $upstream_cache_status [$time_local] '
+                    '"$request" $status $body_bytes_sent '
+                    '"$http_referer" "$http_user_agent"';
+      access_log logs/access.log main;
+      proxy_cache_background_update on;
+      proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=cache:500m inactive={{ .Values.nginx.cache_inactive }} max_size={{ .Values.nginx.max_cache_size }};
+      proxy_cache_key $request_uri;
+      proxy_cache cache;
+      proxy_cache_revalidate on;
+      proxy_cache_valid 200 {{ .Values.nginx.cache_time }};
+      proxy_cache_lock on;
+      proxy_cache_lock_timeout 0s;
+      proxy_cache_lock_age 2m;
+      proxy_cache_use_stale error timeout;
+      proxy_cache_bypass $http_pragma;
+      proxy_no_cache $http_authorization;
+      proxy_ignore_headers Set-Cookie;
+      proxy_pass_header Server;
+      proxy_send_timeout 30m;
+      proxy_read_timeout 30m;
+      proxy_http_version 1.1;
+      proxy_ssl_server_name on;
+      proxy_intercept_errors on;
+      recursive_error_pages on;
+      resolver local=on ipv6=off;
+      aio threads;
+      aio_write on;
+      sendfile on;
+      tcp_nopush on;
+      tcp_nodelay on;
+      gunzip on;
+      gzip on;
+      {{- .Values.nginx.custom_config | nindent 6 }}
+      upstream backend {
+          server unix:/tmp/nginx.sock;
+      }
+      server {
+        listen 8080;
+        location / { return 404; }
+        location /healthz { return 200; access_log off; }
+        location ~ {{ .Values.nginx.worldRoot }}/(http|https)/([-a-z0-9\.]+)/(.*) {
+          set $target "$1://$2";
+          sub_filter https://registry.npmjs.org $scheme://$http_host{{ .Values.nginx.worldRoot }}/$1/$2;
+          sub_filter https://files.pythonhosted.org/packages $scheme://$http_host{{ .Values.nginx.worldRoot }}/https/files.pythonhosted.org/packages;
+          sub_filter_once off;
+          sub_filter_types *;
+          proxy_set_header Accept-Encoding "";
+          proxy_pass http://backend;
+        }
+      }
+      server {
+        listen unix:/tmp/nginx.sock;
+        access_log off;
+        location @handle_redirects {
+          set $saved_redirect_location '$upstream_http_location';
+          proxy_intercept_errors on;
+          error_page 301 302 307 = @handle_redirects;
+          proxy_pass $saved_redirect_location;
+        }
+        location ~ {{ .Values.nginx.worldRoot }}/(http|https)/([-a-z0-9\.]+)/(.*) {
+          set $target "$1://$2";
+          proxy_set_header Host $2;
+          rewrite {{ .Values.nginx.worldRoot }}/(http|https)/([-a-z0-9\.]+)/(.*) /$3 break;
+          proxy_redirect ~$target /{{ .Values.nginx.worldRoot }}/$1/$2/;
+          error_page 301 302 307 = @handle_redirects;
+          proxy_pass $target;
+        }
+      }
+    }

@@ -1,0 +1,5 @@
+apiVersion: v2
+name: gitlab-docker-runner
+description: GitLab Runner with Docker excutor
+version: 0.1.0
+appVersion: 14.6.0

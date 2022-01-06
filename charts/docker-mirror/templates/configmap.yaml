@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "docker-mirror.fullname" . }}
+  labels:
+    {{- include "docker-mirror.labels" . | nindent 4 }}
+data:
+  registry.yml: |
+    version: 0.1
+    storage:
+      filesystem:
+        rootdirectory: /var/tmp
+      cache:
+        blobdescriptor: inmemory
+      delete:
+        enabled: true
+    http:
+      addr: 0.0.0.0:5000
+      headers:
+        X-Content-Type-Options: [nosniff]
+    compatibility:
+      schema1:
+        enabled: true
+  nginx.conf: |
+    worker_processes  2;
+    pid /tmp/nginx.pid;
+    events {
+      multi_accept        on;
+      worker_connections  16384;
+    }
+    http {
+      include       mime.types;
+      default_type  application/octet-stream;
+      client_body_temp_path /tmp/nginx-client-body;
+      proxy_temp_path       /tmp/nginx-proxy;
+      fastcgi_temp_path     /tmp/nginx-fastcgi;
+      uwsgi_temp_path       /tmp/nginx-uwsgi;
+      scgi_temp_path        /tmp/nginx-scgi;
+      proxy_cache_background_update on;
+      proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=cache:100m inactive={{ .Values.nginx.cache_inactive }} max_size={{ .Values.nginx.max_cache_size }};
+      proxy_cache_key $request_uri;
+      proxy_cache cache;
+      proxy_cache_revalidate on;
+      proxy_cache_valid {{ join " " .Values.nginx.cache_response }} {{ .Values.nginx.cache_time }};
+      proxy_cache_use_stale error timeout;
+      proxy_cache_lock on;
+      proxy_cache_lock_timeout 0s;
+      proxy_cache_lock_age 2m;
+      {{- .Values.nginx.custom_config | nindent 4 }}
+      map $request_uri $registry_addr {
+        {{- range $index, $value := .Values.repo }}
+        ~^/v2/({{ $value.paths | join "|" }})/ 127.0.0.1:{{ add $index 5001 }};
+        {{- end }}
+        default 127.0.0.1:4999;
+      }
+      server {
+        server_name _;
+        listen 4999;
+        location / { return 400; }
+      }
+      server {
+        server_name _;
+        listen 5000;
+        location / { return 400; }
+        location ~ ^/v2/ {
+          proxy_set_header Host $registry_addr;
+          proxy_pass http://$registry_addr;
+        }
+        location = /v2/ {
+          return 200 '{}';
+          add_header Content-Type "application/json; charset=utf-8";
+        }
+      }
+    }

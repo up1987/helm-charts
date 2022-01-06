@@ -1,0 +1,40 @@
+title: UP1987 Charts
+description: The UP1987 Kubernetes Helm Charts
+remote_theme: mmistakes/minimal-mistakes@4.24.0
+atom_feed:
+  hide: true
+plugins:
+  - jekyll-paginate
+  - jekyll-sitemap
+  - jekyll-gist
+  - jekyll-feed
+  - jemoji
+  - jekyll-include-cache
+  - jekyll-readme-index
+
+readme_index:
+  enabled:          true
+
+defaults:
+  - scope:
+      path: "README.md"
+    values:
+      layout: splash
+      title: "The UP1987 Kubernetes Helm Charts"
+  - scope:
+      path: ""
+      type: charts
+    values:
+      layout: single
+      author_profile: false
+      read_time: false
+      comments: false
+      share: false
+      related: false
+      sidebar:
+        nav: "charts-nav"
+
+collections:
+  charts:
+    output: true
+    permalink: /:collection/:path/

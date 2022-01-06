@@ -1,0 +1,18 @@
+{{- if .Values.metrics.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "gitlab-docker-runner.fullname" . }}
+  labels: {{- include "gitlab-docker-runner.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.metrics.type }}
+  {{- if .Values.metrics.clusterIP }}
+  clusterIP: {{ .Values.metrics.clusterIP | quote }}
+  {{- end }}
+  ports:
+    - port: {{ .Values.metrics.port }}
+      targetPort: http
+      protocol: TCP
+      name: metrics
+  selector: {{- include "gitlab-docker-runner.selectorLabels" . | nindent 4 }}
+{{- end }}

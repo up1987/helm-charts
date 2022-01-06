@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "docker-mirror.fullname" . }}
+  labels:
+{{ include "docker-mirror.labels" . | indent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  minReadySeconds: 3
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      {{- include "docker-mirror.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "docker-mirror.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/configmap: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: setup-pv
+          image:  "{{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag }}"
+          imagePullPolicy: {{ .Values.nginx.image.pullPolicy }}
+          volumeMounts:
+            - name: cache
+              mountPath: /var/cache/nginx
+          securityContext:
+            runAsUser: 0
+          command:
+            - bash
+            - -c
+            - |
+               chown nginx:nginx /var/cache/nginx
+      containers:
+        - name: nginx
+          securityContext:
+            {{- toYaml .Values.nginx.securityContext | nindent 12 }}
+          image: "{{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag }}"
+          imagePullPolicy: {{ .Values.nginx.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 5000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /v2/
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /v2/
+              port: http
+          resources:
+            {{- toYaml .Values.nginx.resources | nindent 12 }}
+          volumeMounts:
+            - name: cache
+              mountPath: /var/cache/nginx
+            - name: config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+      {{- range $index, $value := .Values.repo }}
+        - name: {{ $value.name | replace "." "-" }}
+          securityContext:
+            {{- toYaml $.Values.registry.securityContext | nindent 12 }}
+          image: "{{ $.Values.registry.image.repository }}:{{ $.Values.registry.image.tag }}"
+          imagePullPolicy: {{ $.Values.registry.image.pullPolicy }}
+          ports:
+            - name: registry-{{ $index }}
+              containerPort: {{ add $index 5001 }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /v2/
+              port: registry-{{ $index }}
+          readinessProbe:
+            httpGet:
+              path: /v2/
+              port: registry-{{ $index }}
+          env:
+            - name: REGISTRY_PROXY_REMOTEURL
+              value: 'https://{{ $value.name }}'
+            - name: REGISTRY_HTTP_ADDR
+              value: '0.0.0.0:{{ add $index 5001 }}'
+          resources:
+            {{- toYaml $.Values.registry.resources | nindent 12 }}
+          volumeMounts:
+          - name: config
+            mountPath: /etc/docker/registry/config.yml
+            subPath: registry.yml
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      volumes:
+      - name: cache
+        {{- if .Values.persistence.enabled }}
+        persistentVolumeClaim:
+          claimName: {{ .Values.persistence.existingClaim | default (include "docker-mirror.fullname" .) }}  
+        {{- else }}
+        emptyDir: {}
+        {{- end }}
+      - configMap:
+          defaultMode: 0644
+          name: {{ include "docker-mirror.fullname" . }}
+          optional: false
+        name: config

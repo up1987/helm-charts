@@ -1,0 +1,24 @@
+lint Helm Charts:
+  image:
+    name: alpine/helm:3.7.2
+    entrypoint: ["/bin/sh", "-c"]
+  stage: test
+  script:
+    - helm lint charts/*
+
+pages:
+  image:
+    name: alpine/helm:3.7.2
+    entrypoint: ["/bin/sh", "-c"]
+  stage: deploy
+  script:
+    - mkdir -p ./public
+    - "echo \"User-Agent: *\nDisallow: /\" > ./public/robots.txt"
+    - helm package charts/* --destination ./public
+    - helm repo index --url https://${CI_PROJECT_NAMESPACE}.gitlab.io/${CI_PROJECT_NAME} .
+    - mv index.yaml ./public
+  artifacts:
+    paths:
+      - public
+  only:
+    - main

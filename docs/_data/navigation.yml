@@ -1,0 +1,15 @@
+main:
+  - title: "Home"
+    url: /
+  - title: "Charts"
+    url: /charts/
+
+charts-nav:
+  - title: Chart Index
+    children:
+      - title: "Docker Mirror"
+        url: /charts/docker-mirror/
+      - title: "Gitlab Docker Runner"
+        url: /charts/gitlab-docker-runner/
+      - title: "World Proxy"
+        url: /charts/world-proxy/

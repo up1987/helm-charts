@@ -1,0 +1,244 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "zabbix-server.fullname" . }}-core
+  labels:
+    {{- include "zabbix-server.labels" . | nindent 4 }}
+    app.kubernetes.io/component: zabbix-server
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "zabbix-server.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: zabbix-server
+  template:
+    metadata:
+      labels:
+        {{- include "zabbix-server.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: zabbix-server
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+      {{- if and .Values.volumePermissions.enabled .Values.persistence.enabled }}
+        - name: setup-pv
+          command:
+            - /bin/sh
+            - -c
+            - |
+              chmod 700 /var/lib/zabbix
+              find /var/lib/zabbix -mindepth 0 -maxdepth 1 | xargs chown -R zabbix:zabbix
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - mountPath: /var/lib/zabbix
+              name: zabbix-data
+            - mountPath: /var/lib/zabbix/snmptraps
+              name: zabbix-data
+              subPath: snmptraps
+              readOnly: false
+      {{- end }}
+      containers:
+        - name: zabbix-server
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: DB_SERVER_HOST
+              value: {{ printf "%s-%s" .Release.Name "postgresql" | trunc 63 | trimSuffix "-" }}
+            - name: POSTGRES_USER
+              value: {{ .Values.global.postgresql.postgresqlUsername | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ printf "%s-%s" .Release.Name "postgresql" | trunc 63 | trimSuffix "-" }}
+                  key: postgresql-password
+            - name: POSTGRES_DB
+              value: {{ .Values.global.postgresql.postgresqlDatabase | quote }}
+            - name: ZBX_ENABLE_SNMP_TRAPS
+              value: {{ .Values.snmptraps.enabled | quote }}
+            {{- if .Values.javaGateway.enabled }}
+            - name: ZBX_JAVAGATEWAY_ENABLE
+              value: "true"
+            - name: ZBX_JAVAGATEWAY
+              value: "127.0.0.1"
+            - name: ZBX_JAVAGATEWAYPORT
+              value: "10052"
+            - name: ZBX_TLSPSKFILE
+              value: "psk.key"
+            - name: ZBX_TLSPSKIDENTITY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "zabbix-server.fullname" . }}-psk
+                  key: psk.identity
+            {{- end }}
+          volumeMounts:
+            - mountPath: /var/lib/zabbix
+              name: zabbix-data
+            - mountPath: /var/lib/zabbix/snmptraps
+              name: zabbix-data
+              subPath: snmptraps
+              readOnly: true
+            - name: psk
+              mountPath: /var/lib/zabbix/enc/psk.key
+              subPath: psk.key
+          ports:
+            - containerPort: 10051
+              protocol: TCP
+              name: zabbix-trapper
+          readinessProbe:
+            tcpSocket:
+              port: zabbix-trapper
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: zabbix-trapper
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+        {{- if .Values.snmptraps.enabled }}
+        - name: zabbix-snmptraps
+          image: "{{ .Values.snmptraps.image.repository }}:{{ .Values.snmptraps.image.tag }}"
+          imagePullPolicy: {{ .Values.snmptraps.image.pullPolicy }}
+          ports:
+            - containerPort: 1162
+              protocol: UDP
+              name: snmp-trap
+          volumeMounts:
+            - mountPath: /var/lib/zabbix/snmptraps
+              name: zabbix-data
+              subPath: snmptraps
+              readOnly: false
+        {{- end }}
+        {{- if .Values.javaGateway.enabled }}
+        - name: zabbix-java-gateway
+          image: "{{ .Values.javaGateway.image.repository }}:{{ .Values.javaGateway.image.tag }}"
+          imagePullPolicy: {{ .Values.javaGateway.image.pullPolicy }}
+          ports:
+            - containerPort: 10052
+              protocol: TCP
+              name: java-gateway
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      volumes:
+        - name: zabbix-data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: data-{{ .Values.persistence.existingClaim | default (include "zabbix-server.fullname" .) }}
+          {{- else }}
+          emptyDir: {}
+          {{ end }}
+        - secret:
+            defaultMode: 0644
+            secretName: {{ include "zabbix-server.fullname" . }}-psk
+            optional: false
+          name: psk
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "zabbix-server.fullname" . }}-web
+  labels:
+    {{- include "zabbix-server.labels" . | nindent 4 }}
+    app.kubernetes.io/component: zabbix-web
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "zabbix-server.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: zabbix-web
+  template:
+    metadata:
+      labels:
+        {{- include "zabbix-server.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: zabbix-web
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: zabbix-web
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}"
+          imagePullPolicy: {{ .Values.web.image.pullPolicy }}
+          env:
+            - name: DB_SERVER_HOST
+              value: {{ printf "%s-%s" .Release.Name "postgresql" | trunc 63 | trimSuffix "-" }}
+            - name: POSTGRES_USER
+              value: {{ .Values.global.postgresql.postgresqlUsername | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ printf "%s-%s" .Release.Name "postgresql" | trunc 63 | trimSuffix "-" }}
+                  key: postgresql-password
+            - name: POSTGRES_DB
+              value: {{ .Values.global.postgresql.postgresqlDatabase | quote }}
+            - name: ZBX_SERVER_NAME
+              value: "Zabbix @ Kubernetes"
+            - name: ZBX_SERVER_HOST
+              value: {{ include "zabbix-server.fullname" . }}-core-headless
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+              name: http
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 15
+            timeoutSeconds: 2
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 15
+            timeoutSeconds: 2
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 5
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
