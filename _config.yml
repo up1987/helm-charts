@@ -12,6 +12,8 @@ plugins:
   - jekyll-include-cache
   - jekyll-readme-index
 
+exclude:
+  - charts
 readme_index:
   enabled: true
 
