@@ -52,6 +52,7 @@
   securityContext:
     privileged: true
   env: {{- include "gitlab-docker-runner.runner-env-vars" . | nindent 4 }}
+  args: {{- toYaml .Values.docker.args | nindent 4 }}
   volumeMounts:
   - name: runner-data
     subPath: builds
