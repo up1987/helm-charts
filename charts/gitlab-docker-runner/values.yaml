@@ -13,6 +13,7 @@ docker:
   repository: docker.io/library/docker
   tag: 20-dind
   pullPolicy: IfNotPresent
+  args: []
 
 imagePullSecrets: []
 nameOverride: ""
