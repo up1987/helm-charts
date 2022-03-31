@@ -22,6 +22,15 @@ entries:
   gitlab-docker-runner:
   - apiVersion: v2
     appVersion: 14.6.0
+    created: "2022-03-31T15:10:24.300819397Z"
+    description: GitLab Runner with Docker excutor
+    digest: 7a608079a35440eda199d1a55f05b6deef0a906fdc16bd9eb3eccf755ce4f1a6
+    name: gitlab-docker-runner
+    urls:
+    - https://github.com/up1987/helm-charts/releases/download/gitlab-docker-runner-0.1.2/gitlab-docker-runner-0.1.2.tgz
+    version: 0.1.2
+  - apiVersion: v2
+    appVersion: 14.6.0
     created: "2022-01-06T09:56:12.940442346Z"
     description: GitLab Runner with Docker excutor
     digest: 92ad63d336f6e60203128f2a64bb326f0bba40cd19340f4d299ec759d68f38a4
